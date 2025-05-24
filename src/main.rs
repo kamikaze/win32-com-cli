@@ -18,8 +18,8 @@ fn to_pcwstr(s: &str) -> PCWSTR {
 
 unsafe fn set_property(obj: &IDispatch, name: &str, value: &str) -> Result<()> {
     let wide_name = to_pcwstr(name);
-    let mut dispid = Default::default();
-    obj.GetIDsOfNames(&Default::default(), &wide_name, 1, 0, &mut dispid)?;
+    let mut dispatch_id = Default::default();
+    obj.GetIDsOfNames(&Default::default(), &wide_name, 1, 0, &mut dispatch_id)?;
 
     let bstr = BSTR::from(value);
     let mut variant = VARIANT::default();
@@ -32,7 +32,7 @@ unsafe fn set_property(obj: &IDispatch, name: &str, value: &str) -> Result<()> {
         ..Default::default()
     };
     obj.Invoke(
-        dispid,
+        dispatch_id,
         &Default::default(),
         0,
         DISPATCH_PROPERTYPUT,
@@ -46,10 +46,10 @@ unsafe fn set_property(obj: &IDispatch, name: &str, value: &str) -> Result<()> {
 
 unsafe fn get_property(obj: &IDispatch, name: &str) -> Result<i32> {
     let wide_name = to_pcwstr(name);
-    let mut dispid = Default::default();
+    let mut dispatch_id = Default::default();
 
     unsafe {
-        obj.GetIDsOfNames(&Default::default(), &wide_name, 1, 0, &mut dispid)?;
+        obj.GetIDsOfNames(&Default::default(), &wide_name, 1, 0, &mut dispatch_id)?;
     }
 
     let params = DISPPARAMS::default();
@@ -57,7 +57,7 @@ unsafe fn get_property(obj: &IDispatch, name: &str) -> Result<i32> {
 
     unsafe {
         obj.Invoke(
-            dispid,
+            dispatch_id,
             &Default::default(),
             0,
             DISPATCH_PROPERTYGET,
@@ -73,10 +73,10 @@ unsafe fn get_property(obj: &IDispatch, name: &str) -> Result<i32> {
 
 unsafe fn call_method(
     obj: &IDispatch,
-    name: &str,
+    name: String,
     properties: HashMap<String, String>,
 ) -> Result<()> {
-    let wide_name = to_pcwstr(name);
+    let wide_name = to_pcwstr(name.as_str());
     let mut dispatch_id = Default::default();
     let mut variant = VARIANT::default();
     let params = DISPPARAMS {
@@ -121,15 +121,15 @@ fn main() -> Result<()> {
         let _ = CoInitialize(None);
         let prog_id = to_pcwstr(com_method_call.prog_id.as_str());
         let clsid = CLSIDFromProgID(prog_id)?;
-        let dispatch: IDispatch = CoCreateInstance(&clsid, None, CLSCTX_ALL)?;
+        let obj: IDispatch = CoCreateInstance(&clsid, None, CLSCTX_ALL)?;
 
         call_method(
-            &dispatch,
-            com_method_call.method_name.as_str(),
+            &obj,
+            com_method_call.method_name,
             com_method_call.properties,
         )?;
 
-        let error_code = get_property(&dispatch, "ErrorCode")?;
+        let error_code = get_property(&obj, "ErrorCode")?;
 
         println!("Error Code: {}", error_code);
         CoUninitialize();
