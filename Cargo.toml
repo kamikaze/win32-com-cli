@@ -1,0 +1,13 @@
+[package]
+name = "win32-com-cli"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+windows = "0.61.1"
+
+[profile.release]
+debug = false
+strip = true
+lto = true
+codegen-units = 1
