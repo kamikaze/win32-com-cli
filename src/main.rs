@@ -123,11 +123,7 @@ fn main() -> Result<()> {
         let clsid = CLSIDFromProgID(prog_id)?;
         let obj: IDispatch = CoCreateInstance(&clsid, None, CLSCTX_ALL)?;
 
-        call_method(
-            &obj,
-            com_method_call.method_name,
-            com_method_call.properties,
-        )?;
+        call_method(&obj, com_method_call.method_name, com_method_call.properties)?;
 
         let error_code = get_property(&obj, "ErrorCode")?;
 
