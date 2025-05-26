@@ -83,7 +83,7 @@ unsafe fn get_property(obj: &IDispatch, name: &str) -> Result<String> {
     }
 
     let bstr_val = BSTR::default();
-    
+
     unsafe {
         VariantToString(&result, &mut bstr_val.to_vec())?;
     }
