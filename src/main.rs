@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use windows::Win32::System::Variant::{VARIANT, VT_BSTR};
+use windows::Win32::System::Ole::DISPID_PROPERTYPUT;
+use windows::Win32::System::Variant::{VARIANT, VariantToString};
 use windows::{Win32::System::Com::*, core::*};
 
 #[derive(Serialize, Deserialize)]
@@ -19,32 +20,45 @@ fn to_pcwstr(s: &str) -> PCWSTR {
 unsafe fn set_property(obj: &IDispatch, name: &str, value: &str) -> Result<()> {
     let wide_name = to_pcwstr(name);
     let mut dispatch_id = Default::default();
-    obj.GetIDsOfNames(&Default::default(), &wide_name, 1, 0, &mut dispatch_id)?;
 
-    let bstr = BSTR::from(value);
-    let mut variant = VARIANT::default();
-    variant.Anonymous.Anonymous.vt = VT_BSTR;
-    variant.Anonymous.Anonymous.Anonymous.bstrVal = std::mem::ManuallyDrop::new(bstr);
+    unsafe {
+        obj.GetIDsOfNames(&Default::default(), &wide_name, 1, 0, &mut dispatch_id)?;
+    }
 
+    let mut variant_value = VARIANT::from(BSTR::from(value));
+    let mut dispid_put = DISPID_PROPERTYPUT;
     let params = DISPPARAMS {
-        rgvarg: &mut variant,
+        rgvarg: &mut variant_value,
+        rgdispidNamedArgs: &mut dispid_put,
         cArgs: 1,
-        ..Default::default()
+        cNamedArgs: 1,
     };
-    obj.Invoke(
-        dispatch_id,
-        &Default::default(),
-        0,
-        DISPATCH_PROPERTYPUT,
-        &params,
-        None,
-        None,
-        None,
-    )?;
+
+    unsafe {
+        obj.Invoke(
+            dispatch_id,
+            &GUID::zeroed(), // Reserved, must be IID_NULL
+            0,
+            DISPATCH_PROPERTYPUT,
+            &params,
+            None, // Not needed for a property put
+            None, // Not needed
+            None, // Not needed
+        )?;
+    }
+
     Ok(())
 }
 
-unsafe fn get_property(obj: &IDispatch, name: &str) -> Result<i32> {
+/// Gets a property from a COM object as a String using IDispatch.
+///
+/// # Safety
+///
+/// This function is unsafe because it interacts with COM, which involves raw pointers
+/// and adheres to a specific, unforgiving interface contract. The caller must ensure that:
+/// 1. `obj` is a valid `IDispatch` pointer.
+/// 2. The property identified by `name` exists and its value can be represented as a string.
+unsafe fn get_property(obj: &IDispatch, name: &str) -> Result<String> {
     let wide_name = to_pcwstr(name);
     let mut dispatch_id = Default::default();
 
@@ -58,8 +72,8 @@ unsafe fn get_property(obj: &IDispatch, name: &str) -> Result<i32> {
     unsafe {
         obj.Invoke(
             dispatch_id,
-            &Default::default(),
-            0,
+            &GUID::zeroed(), // Reserved, must be IID_NULL
+            0,               // Use system default locale
             DISPATCH_PROPERTYGET,
             &params,
             Some(&mut result),
@@ -68,7 +82,13 @@ unsafe fn get_property(obj: &IDispatch, name: &str) -> Result<i32> {
         )?;
     }
 
-    Ok(result.Anonymous.Anonymous.Anonymous.lVal)
+    let bstr_val = BSTR::default();
+    
+    unsafe {
+        VariantToString(&result, &mut bstr_val.to_vec())?;
+    }
+
+    Ok(bstr_val.to_string())
 }
 
 unsafe fn call_method(
@@ -123,7 +143,11 @@ fn main() -> Result<()> {
         let clsid = CLSIDFromProgID(prog_id)?;
         let obj: IDispatch = CoCreateInstance(&clsid, None, CLSCTX_ALL)?;
 
-        call_method(&obj, com_method_call.method_name, com_method_call.properties)?;
+        call_method(
+            &obj,
+            com_method_call.method_name,
+            com_method_call.properties,
+        )?;
 
         let error_code = get_property(&obj, "ErrorCode")?;
 
