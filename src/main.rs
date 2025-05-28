@@ -99,14 +99,6 @@ unsafe fn set_property(obj: &IDispatch, name: &str, value: &Value) -> Result<()>
     Ok(())
 }
 
-/// Gets a property from a COM object as a String using IDispatch.
-///
-/// # Safety
-///
-/// This function is unsafe because it interacts with COM, which involves raw pointers
-/// and adheres to a specific, unforgiving interface contract. The caller must ensure that:
-/// 1. `obj` is a valid `IDispatch` pointer.
-/// 2. The property identified by `name` exists and its value can be represented as a string.
 unsafe fn get_property(obj: &IDispatch, name: &str) -> Result<String> {
     let wide_name = to_pcwstr(name);
     let mut dispatch_id = Default::default();
@@ -145,7 +137,6 @@ unsafe fn call_method(
     name: String,
     properties: HashMap<String, Value>,
 ) -> Result<()> {
-    // 1. Set all properties first
     for (prop_name, prop_value) in properties {
         println!("Setting property: {} = {:?}", prop_name, prop_value);
 
@@ -154,7 +145,6 @@ unsafe fn call_method(
         }
     }
 
-    // 2. Now call the method
     let wide_name = to_pcwstr(name.as_str());
     let mut dispatch_id = Default::default();
 
@@ -162,10 +152,7 @@ unsafe fn call_method(
     unsafe {
         obj.GetIDsOfNames(&Default::default(), &wide_name, 1, 0, &mut dispatch_id)?;
     }
-
-    // Prepare DISPPARAMS for calling a method with no arguments
-    // The original `call_method` had `cArgs: 1` but `rgvarg` pointing to a default variant.
-    // For a method with no arguments, `cArgs` should be 0.
+    
     let mut variant_result = VARIANT::default(); // For potential return value of the method
     let params = DISPPARAMS {
         rgvarg: &mut variant_result, // If the method returns a value, it would be stored here.
@@ -198,8 +185,8 @@ fn main() -> Result<()> {
             "prog_id": "ECR2ATL.ECR2Transaction",
             "method": "Cancellation",
             "properties": {
-                "ECRNameAndVersion": "CL E-kvits Ver. 2025.5.22",
-                "ReqInvoiceNumber": "CL12345",
+                "ECRNameAndVersion": "App Ver. 123.321",
+                "ReqInvoiceNumber": "NR12345",
                 "ReqDateTime": "2025-05-22 12:33:44",
             }
         }"#;
