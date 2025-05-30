@@ -14,7 +14,7 @@ windows = { version = "0.61.1", features = [
 serde = { version = "1.0.219", features = ["derive"] }
 
 [profile.release]
-opt-level = "z"
+opt-level = 3
 debug = false
 strip = true
 lto = true
