@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
+use std::io::{self, Read};
 use windows::Win32::System::Ole::DISPID_PROPERTYPUT;
 use windows::Win32::System::Variant::{VARIANT, VariantToString};
 use windows::{Win32::System::Com::*, core::*};
@@ -152,7 +153,7 @@ unsafe fn call_method(
     unsafe {
         obj.GetIDsOfNames(&Default::default(), &wide_name, 1, 0, &mut dispatch_id)?;
     }
-    
+
     let mut variant_result = VARIANT::default(); // For potential return value of the method
     let params = DISPPARAMS {
         rgvarg: &mut variant_result, // If the method returns a value, it would be stored here.
@@ -178,38 +179,43 @@ unsafe fn call_method(
     Ok(())
 }
 
-fn main() -> Result<()> {
-    let data = r#"
-        {
-            "version": "1",
-            "prog_id": "ECR2ATL.ECR2Transaction",
-            "method": "Cancellation",
-            "properties": {
-                "ECRNameAndVersion": "App Ver. 123.321",
-                "ReqInvoiceNumber": "NR12345",
-                "ReqDateTime": "2025-05-22 12:33:44"
-            }
-        }"#;
-    let com_method_call: ComMethodCall =
-        serde_json::from_str(data).expect("Failed to deserialize ComMethodCall JSON");
+fn get_data_from_stdio() -> String {
+    let mut buffer = String::new();
+    io::stdin()
+        .read_to_string(&mut buffer)
+        .expect("Failed to read from stdin");
 
+    buffer
+}
+fn get_call_params_from_json_buffer(buffer: String) -> ComMethodCall {
+    let com_method_call: ComMethodCall =
+        serde_json::from_str(&buffer).expect("Failed to deserialize ComMethodCall JSON");
+
+    com_method_call
+}
+
+fn execute(com_method_call: ComMethodCall) -> Result<()> {
     unsafe {
         let _ = CoInitialize(None);
         let prog_id = to_pcwstr(com_method_call.prog_id.as_str());
         let clsid = CLSIDFromProgID(prog_id)?;
         let obj: IDispatch = CoCreateInstance(&clsid, None, CLSCTX_ALL)?;
 
-        call_method(
-            &obj,
-            com_method_call.method,
-            com_method_call.properties,
-        )?;
+        call_method(&obj, com_method_call.method, com_method_call.properties)?;
 
         let error_code = get_property(&obj, "ErrorCode")?;
 
         println!("Error Code: {}", error_code);
         CoUninitialize();
     }
-
+    
     Ok(())
+}
+
+fn main() -> Result<()> {
+    let buffer = get_data_from_stdio();
+    let com_method_call = get_call_params_from_json_buffer(buffer);
+    let result = execute(com_method_call);
+    
+    result
 }
