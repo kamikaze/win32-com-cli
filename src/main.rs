@@ -9,7 +9,7 @@ use windows::{Win32::System::Com::*, core::*};
 struct ComMethodCall {
     version: String,
     prog_id: String,
-    method_name: String,
+    method: String,
     properties: HashMap<String, Value>,
 }
 
@@ -187,7 +187,7 @@ fn main() -> Result<()> {
             "properties": {
                 "ECRNameAndVersion": "App Ver. 123.321",
                 "ReqInvoiceNumber": "NR12345",
-                "ReqDateTime": "2025-05-22 12:33:44",
+                "ReqDateTime": "2025-05-22 12:33:44"
             }
         }"#;
     let com_method_call: ComMethodCall =
@@ -201,7 +201,7 @@ fn main() -> Result<()> {
 
         call_method(
             &obj,
-            com_method_call.method_name,
+            com_method_call.method,
             com_method_call.properties,
         )?;
 
