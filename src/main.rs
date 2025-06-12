@@ -35,8 +35,8 @@ unsafe fn value_to_variant(value: &Value) -> VARIANT {
             } else {
                 // Fallback for numbers that don't fit i64 or f64 (e.g., very large BigInts)
                 eprintln!(
-                    "Warning: Unsupported number type in JSON, defaulting to empty VARIANT. Value: {}",
-                    n
+                    "Warning: Unsupported number type in JSON, defaulting to empty VARIANT. \
+                    Value: {n}"
                 );
                 VARIANT::default()
             }
@@ -48,13 +48,15 @@ unsafe fn value_to_variant(value: &Value) -> VARIANT {
         }
         Value::Array(_) => {
             eprintln!(
-                "Warning: JSON Array type is not directly supported for simple VARIANT conversion for property setting. Defaulting to empty VARIANT."
+                "Warning: JSON Array type is not directly supported for simple VARIANT conversion \
+                for property setting. Defaulting to empty VARIANT."
             );
             VARIANT::default()
         }
         Value::Object(_) => {
             eprintln!(
-                "Warning: JSON Object type is not directly supported for simple VARIANT conversion for property setting. Defaulting to empty VARIANT."
+                "Warning: JSON Object type is not directly supported for simple VARIANT conversion \
+                for property setting. Defaulting to empty VARIANT."
             );
             VARIANT::default()
         }
@@ -139,7 +141,7 @@ unsafe fn call_method(
     properties: HashMap<String, Value>,
 ) -> Result<()> {
     for (prop_name, prop_value) in properties {
-        println!("Setting property: {} = {:?}", prop_name, prop_value);
+        println!("Setting property: {prop_name} = {prop_value:?}");
 
         unsafe {
             set_property(obj, &prop_name, &prop_value)?;
@@ -161,7 +163,7 @@ unsafe fn call_method(
         ..Default::default()
     };
 
-    println!("Calling method: {}", name);
+    println!("Calling method: {name}");
     // Invoke the method
     unsafe {
         obj.Invoke(
@@ -205,7 +207,7 @@ fn execute(com_method_call: ComMethodCall) -> Result<()> {
 
         let error_code = get_property(&obj, "ErrorCode")?;
 
-        println!("Error Code: {}", error_code);
+        println!("Error Code: {error_code}");
         CoUninitialize();
     }
     
