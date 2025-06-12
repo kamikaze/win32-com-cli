@@ -196,14 +196,14 @@ fn get_call_params_from_json_buffer(buffer: String) -> ComMethodCall {
     com_method_call
 }
 
-fn execute(com_method_call: ComMethodCall) -> Result<()> {
+fn call(params: ComMethodCall) -> Result<()> {
     unsafe {
         let _ = CoInitialize(None);
-        let prog_id = to_pcwstr(com_method_call.prog_id.as_str());
+        let prog_id = to_pcwstr(params.prog_id.as_str());
         let clsid = CLSIDFromProgID(prog_id)?;
         let obj: IDispatch = CoCreateInstance(&clsid, None, CLSCTX_ALL)?;
 
-        call_method(&obj, com_method_call.method, com_method_call.properties)?;
+        call_method(&obj, params.method, params.properties)?;
 
         let error_code = get_property(&obj, "ErrorCode")?;
 
@@ -216,8 +216,8 @@ fn execute(com_method_call: ComMethodCall) -> Result<()> {
 
 fn main() -> Result<()> {
     let buffer = get_data_from_stdio();
-    let com_method_call = get_call_params_from_json_buffer(buffer);
-    let result = execute(com_method_call);
+    let params = get_call_params_from_json_buffer(buffer);
+    let result = call(params);
     
     result
 }
