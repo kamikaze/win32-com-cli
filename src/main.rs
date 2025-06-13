@@ -14,6 +14,22 @@ struct ComMethodCall {
     properties: HashMap<String, Value>,
 }
 
+#[derive(Serialize, Deserialize)]
+struct ComMethodCallResult {
+    version: String,
+    prog_id: String,
+    method: String,
+    result: HashMap<String, Value>,
+}
+
+#[derive(Serialize, Deserialize)]
+struct ComMethodCallError {
+    version: String,
+    prog_id: String,
+    method: String,
+    error: String,
+}
+
 fn to_pcwstr(s: &str) -> PCWSTR {
     let wide: Vec<u16> = s.encode_utf16().chain(std::iter::once(0)).collect();
     PCWSTR::from_raw(wide.as_ptr())
@@ -164,7 +180,7 @@ unsafe fn call_method(
     };
 
     println!("Calling method: {name}");
-    // Invoke the method
+
     unsafe {
         obj.Invoke(
             dispatch_id,     // DISPID of the method
@@ -196,7 +212,7 @@ fn get_call_params_from_json_buffer(buffer: String) -> ComMethodCall {
     com_method_call
 }
 
-fn call(params: ComMethodCall) -> Result<()> {
+fn call(params: ComMethodCall) -> Result<String> {
     unsafe {
         let _ = CoInitialize(None);
         let prog_id = to_pcwstr(params.prog_id.as_str());
@@ -210,14 +226,23 @@ fn call(params: ComMethodCall) -> Result<()> {
         println!("Error Code: {error_code}");
         CoUninitialize();
     }
-    
-    Ok(())
+
+    Ok("{}".to_string())
 }
 
 fn main() -> Result<()> {
     let buffer = get_data_from_stdio();
     let params = get_call_params_from_json_buffer(buffer);
     let result = call(params);
-    
-    result
+
+    match result {
+        Ok(message) => {
+            println!("{message}");
+        }
+        Err(error) => {
+            eprintln!("{error}");
+        }
+    }
+
+    Ok(())
 }
