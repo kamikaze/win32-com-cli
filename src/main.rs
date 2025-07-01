@@ -179,7 +179,7 @@ unsafe fn call_method(
         ..Default::default()
     };
 
-    println!("Calling method: {name}");
+    eprintln!("Calling method: {name}");
 
     unsafe {
         obj.Invoke(
@@ -212,7 +212,7 @@ fn get_call_params_from_json_buffer(buffer: String) -> ComMethodCall {
     com_method_call
 }
 
-fn call(params: ComMethodCall) -> Result<String> {
+fn call_com_method(params: ComMethodCall) -> Result<String> {
     unsafe {
         let _ = CoInitialize(None);
         let prog_id = to_pcwstr(params.prog_id.as_str());
@@ -223,7 +223,7 @@ fn call(params: ComMethodCall) -> Result<String> {
 
         let error_code = get_property(&obj, "ErrorCode")?;
 
-        println!("Error Code: {error_code}");
+        eprintln!("Error Code: {error_code}");
         CoUninitialize();
     }
 
@@ -233,7 +233,7 @@ fn call(params: ComMethodCall) -> Result<String> {
 fn main() -> Result<()> {
     let buffer = get_data_from_stdio();
     let params = get_call_params_from_json_buffer(buffer);
-    let result = call(params);
+    let result = call_com_method(params);
 
     match result {
         Ok(message) => {

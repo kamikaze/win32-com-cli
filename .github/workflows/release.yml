@@ -44,4 +44,3 @@ jobs:
         with:
           name: win32-com-cli-${{ github.ref_name }}-windows-x86.exe
           path: ./win32-com-cli-${{ github.ref_name }}-windows-x86.exe
-
